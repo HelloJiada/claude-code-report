@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claude Code 使用复盘报告：Lereader Android（2026-05-27）</title>
+<style>
+:root{--bg:#f6f7fb;--card:#fff;--text:#182033;--muted:#667085;--line:#e6e8ef;--accent:#4f46e5}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",Arial,sans-serif;line-height:1.72}
+main{max-width:1080px;margin:32px auto;padding:40px 48px;background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 12px 40px rgba(16,24,40,.06)}
+h1{font-size:32px;margin:0 0 24px;padding-bottom:18px;border-bottom:2px solid var(--line)}h2{margin-top:42px;font-size:24px;border-left:5px solid var(--accent);padding-left:12px}h3{margin-top:28px;font-size:19px}
+p{margin:12px 0}ul,ol{padding-left:1.5em}li{margin:6px 0}table{width:100%;border-collapse:collapse;margin:16px 0 24px;font-size:14px;overflow:hidden;border-radius:10px}th,td{border:1px solid var(--line);padding:10px 12px;vertical-align:top}th{background:#f2f4f8;text-align:left}
+blockquote{margin:16px 0;padding:12px 16px;border-left:4px solid var(--accent);background:#f7f7ff;color:#344054}code{background:#f2f4f7;border-radius:5px;padding:2px 5px;font-family:"SFMono-Regular",Consolas,monospace;font-size:.92em}pre{overflow:auto;background:#101828;color:#e4e7ec;border-radius:12px;padding:16px}pre code{background:transparent;color:inherit;padding:0}hr{border:none;border-top:1px solid var(--line);margin:28px 0}strong{color:#111827}@media(max-width:760px){main{margin:0;border-radius:0;padding:24px 18px}h1{font-size:26px}table{font-size:13px}}
+</style></head><body><main><h1>Claude Code 使用复盘报告：Lereader Android（2026-05-27）</h1>
+<h2>0. 报告定位</h2>
+<p>它和 <code>/Users/jade/Desktop/Claude Code 使用报告.html</code> 的区别是：HTML 报告偏整体使用画像，本报告只看 Lereader 项目里的真实会话、缓存、技能、文档和项目产物，重点复盘你在 Android 项目中如何使用 Claude Code，以及哪里可以减少返工。</p>
+<hr>
+<h2>1. 统计口径说明</h2>
+<h3>数据来源</h3>
+<p>检查范围包括：</p>
+<ul>
+<li><code>~/.claude/projects/-Users-jade-Lereader/*.jsonl</code>：Lereader 项目下 Claude Code 会话记录；</li>
+<li><code>/Users/jade/Lereader/.claude/</code>：项目内文档、spec、skills、hooks、weekly reports、codereview；</li>
+<li><code>/Users/jade/Lereader/CLAUDE.md</code>：项目约束与任务类型索引；</li>
+<li><code>/Users/jade/Desktop/Claude Code 使用报告.html</code>：仅作为对照，不作为本报告唯一依据。</li>
+</ul>
+<h3>时间估算口径</h3>
+<p>会话记录没有天然的「真实专注时长」字段，所以采用估算：</p>
+<ul>
+<li>每个 JSONL 会话取所有带 timestamp 的事件；</li>
+<li>相邻事件间隔累加；</li>
+<li>单个间隔最多按 30 分钟计算，避免挂起终端、吃饭、睡觉被算入使用时间；</li>
+<li>每个有效会话额外加 3-10 分钟基础操作时间；</li>
+<li>因为存在并行会话、resume、后台任务和模型报错，结果只能表示「Claude Code 活跃交互时间」，不是严格工时。</li>
+</ul>
+<hr>
+<h2>2. Lereader Android 总览</h2>
+<table><thead><tr><th>指标</th><th>数值</th></tr></thead><tbody>
+<tr><td>Lereader 有效会话</td><td>69 个</td></tr>
+<tr><td>估算活跃使用时长</td><td>约 150.2 小时</td></tr>
+<tr><td>事件数</td><td>49,139</td></tr>
+<tr><td>用户消息数</td><td>12,251</td></tr>
+<tr><td>工具调用数</td><td>10,079</td></tr>
+<tr><td>全部 Claude Code 活跃时长占比</td><td>约 62.6%</td></tr>
+</tbody></table>
+<p>判断：Lereader 是你的 Claude Code 主项目。你不是轻量问答，而是在用 Claude Code 做长期 Android 项目维护：读代码、定位 bug、写技术方案、沉淀文档、做提交流程、维护 <code>.claude</code> 工程化体系。</p>
+<hr>
+<h2>3. Lereader 项目产物概况</h2>
+<p><code>/Users/jade/Lereader/.claude</code> 当前产物：</p>
+<table><thead><tr><th>目录</th><th>文件数</th><th>大小</th><th>说明</th></tr></thead><tbody>
+<tr><td><code>docs</code></td><td>61</td><td>374.1 KB</td><td>主力知识库，覆盖阅读器、支付、首页、平台、路由、启动等</td></tr>
+<tr><td><code>specs</code></td><td>35</td><td>252.6 KB</td><td>Kiro/spec 风格需求、设计、任务拆解</td></tr>
+<tr><td><code>skills</code></td><td>9</td><td>18.5 KB</td><td>deep-analyze、commit-push、weekly-report 等工作流封装</td></tr>
+<tr><td><code>steering</code></td><td>8</td><td>49.4 KB</td><td>架构、技术、规范、性能、调试规则</td></tr>
+<tr><td><code>hooks</code></td><td>16</td><td>31.1 KB</td><td>pre-commit、security、arch、weekly、logcat 等自动化构想</td></tr>
+<tr><td><code>weekly-reports</code></td><td>2</td><td>6.8 KB</td><td>周报产物</td></tr>
+<tr><td><code>codereview</code></td><td>1</td><td>4.7 KB</td><td>MR 审查产物</td></tr>
+</tbody></table>
+<p><code>docs</code> 主题分布：</p>
+<table><thead><tr><th>主题</th><th>Markdown 数</th><th>大小</th></tr></thead><tbody>
+<tr><td>reader</td><td>8</td><td>100 KB</td></tr>
+<tr><td>feature</td><td>11</td><td>58 KB</td></tr>
+<tr><td>home</td><td>5</td><td>27 KB</td></tr>
+<tr><td>payment</td><td>4</td><td>26 KB</td></tr>
+<tr><td>startup</td><td>3</td><td>26 KB</td></tr>
+<tr><td>platform</td><td>6</td><td>24 KB</td></tr>
+<tr><td>routing</td><td>2</td><td>16 KB</td></tr>
+<tr><td>releases</td><td>1</td><td>10 KB</td></tr>
+<tr><td>architecture</td><td>1</td><td>7 KB</td></tr>
+<tr><td>library</td><td>1</td><td>6 KB</td></tr>
+<tr><td>genre</td><td>1</td><td>5 KB</td></tr>
+</tbody></table>
+<p>判断：Lereader 的 <code>.claude</code> 已经是一个小型项目知识库。优势是上下文沉淀充分，风险是文档数量继续增长后，Claude 可能不知道优先读哪一份。</p>
+<hr>
+<h2>4. 主要工作内容</h2>
+<p>Lereader 中的 Claude Code 使用主要集中在以下方向：</p>
+<ol>
+<li><strong>阅读器核心链路</strong></li>
+</ol>
+<p>   - <code>ReadActivity</code>、<code>ReadViewModel</code>；</p>
+<p>   - 阅读器支付弹窗；</p>
+<p>   - 退出弹窗；</p>
+<p>   - 广告解锁；</p>
+<p>   - 阅读计时；</p>
+<p>   - scroll/page 模式一致性。</p>
+<ol>
+<li><strong>支付 / 商店 / 验单</strong></li>
+</ol>
+<p>   - 三方支付验单；</p>
+<p>   - <code>MembershipRechargeRetainDialog</code>；</p>
+<p>   - <code>ConfirmPayDialog</code>；</p>
+<p>   - SKU 价格保护；</p>
+<p>   - 订阅返回解锁；</p>
+<p>   - <code>pay_type</code> 映射。</p>
+<ol>
+<li><strong>首页 / 发现页</strong></li>
+</ol>
+<p>   - BookSlide 横滑；</p>
+<p>   - DiscoverAdapter；</p>
+<p>   - 冷启动优化；</p>
+<p>   - Banner 展示；</p>
+<p>   - 继续阅读浮层。</p>
+<ol>
+<li><strong>Firefly / H5 / 路由</strong></li>
+</ol>
+<p>   - Firefly H5 弹窗；</p>
+<p>   - H5 bridge；</p>
+<p>   - 通知路由；</p>
+<p>   - JsApi；</p>
+<p>   - 飞书需求文档接入。</p>
+<ol>
+<li><strong>平台能力</strong></li>
+</ol>
+<p>   - 缓存加密；</p>
+<p>   - Gson Double 转 String；</p>
+<p>   - 实验 key 管理；</p>
+<p>   - <code>arch_lint.py</code>；</p>
+<p>   - hooks 与安全检查。</p>
+<ol>
+<li><strong>方案 / 发布 / 提交流程</strong></li>
+</ol>
+<p>   - feature 技术方案；</p>
+<p>   - release notes；</p>
+<p>   - 周报；</p>
+<p>   - commit/push 流程；</p>
+<p>   - pre-commit 检查。</p>
+<hr>
+<h2>5. 代表性产出文件</h2>
+<h3>阅读器</h3>
+<ul>
+<li><code>.claude/docs/reader/read_activity_analysis.md</code></li>
+<li><code>.claude/docs/reader/scroll-vs-page-mode-audit.md</code></li>
+<li><code>.claude/docs/reader/sku-price-ready-fix.md</code></li>
+<li><code>.claude/docs/reader/ad_unlock_flow.md</code></li>
+<li><code>.claude/docs/reader/exit-flow.md</code></li>
+<li><code>.claude/docs/reader/reading-timers-and-countdowns.md</code></li>
+</ul>
+<h3>支付</h3>
+<ul>
+<li><code>.claude/docs/payment/README.md</code></li>
+<li><code>.claude/docs/payment/payment_method_flow.md</code></li>
+<li><code>.claude/docs/payment/reader_store_subscription_flow.md</code></li>
+<li><code>.claude/docs/payment/auto-unlock-logic.md</code></li>
+</ul>
+<h3>首页 / 启动 / 路由</h3>
+<ul>
+<li><code>.claude/docs/home/book_slide_optimization.md</code></li>
+<li><code>.claude/docs/home/discover-adapter.md</code></li>
+<li><code>.claude/docs/startup/discover_cold_start_optimization.md</code></li>
+<li><code>.claude/docs/routing/notification_routing.md</code></li>
+<li><code>.claude/docs/routing/h5_bridge_flow.md</code></li>
+</ul>
+<h3>平台 / 工作流</h3>
+<ul>
+<li><code>.claude/docs/platform/cache_encryption_analysis.md</code></li>
+<li><code>.claude/docs/platform/experiment-keys.md</code></li>
+<li><code>.claude/docs/platform/high-frequency-fails.md</code></li>
+<li><code>.claude/docs/platform/hooks-index.md</code></li>
+<li><code>.claude/skills/deep-analyze/SKILL.md</code></li>
+<li><code>.claude/skills/commit-push/SKILL.md</code></li>
+<li><code>.claude/skills/pre-commit-checklist/SKILL.md</code></li>
+</ul>
+<h3>技术方案</h3>
+<ul>
+<li><code>.claude/docs/feature/2026-05-26-store-popup-delayed-toast-plan.md</code></li>
+<li><code>.claude/docs/feature/2026-05-26-store-popup-sku-toast-plan.md</code></li>
+<li><code>.claude/docs/feature/2026-05-26-store-popup-toast-first-reason-plan.md</code></li>
+<li><code>.claude/docs/feature/2026-05-26-store-first-topup-log-plan.md</code></li>
+<li><code>.claude/docs/feature/2026-05-26-store-sub-read-free-month-log-plan.md</code></li>
+<li><code>.claude/docs/feature/recommend-no-read-record-book-detail-tech-design.md</code></li>
+<li><code>.claude/docs/feature/recommend-no-read-record-book-detail-full-tech-design.md</code></li>
+<li><code>.claude/docs/feature/recommend-no-read-record-book-detail-light-tech-design.md</code></li>
+</ul>
+<hr>
+<h2>6. 做得好的地方</h2>
+<h3>6.1 日志驱动定位</h3>
+<p>支付和阅读器问题里，你经常提供 logcat、测试反馈、真实状态，例如 pay_verify、subscribeList、webLauncher callback、orderNum 等。这样能把 Claude 从猜测拉回证据链。</p>
+<p>这是 Lereader 使用 Claude Code 中最高价值的模式：<strong>先给现象和日志，再让 Claude 追代码，而不是只描述“好像不对”。</strong></p>
+<h3>6.2 文档优先意识已经形成</h3>
+<p>项目里已经形成了明确约束：</p>
+<ul>
+<li>阅读器先读 <code>.claude/docs/reader/read_activity_analysis.md</code>；</li>
+<li>支付先读 <code>.claude/docs/payment/README.md</code>；</li>
+<li>路由先读 <code>.claude/docs/routing/notification_routing.md</code>；</li>
+<li>实验先读 <code>.claude/docs/platform/experiment-keys.md</code>。</li>
+</ul>
+<p>这能显著降低 Claude 读错入口、漏掉平行分支、重复探索旧问题的概率。</p>
+<h3>6.3 能把踩坑固化成规则</h3>
+<p>多个历史问题已经沉淀为长期规则：</p>
+<ul>
+<li>支付弹窗只有支付成功才 dismiss；</li>
+<li>验单失败/取消不能自动关闭弹窗；</li>
+<li>Gson <code>HashMap.class</code> 数字会变 Double；</li>
+<li>提交前删除调试 Log.d；</li>
+<li>SingleLiveEvent 重试要先设哨兵；</li>
+<li>异步转同步缓存要检查调用链时序依赖。</li>
+</ul>
+<p>这说明你不是只解决一次问题，而是在让 Claude Code 逐步适配 Lereader 项目的真实风险。</p>
+<h3>6.4 验收意识强</h3>
+<p>你经常要求确认：</p>
+<ul>
+<li>成功分支是否关闭弹窗；</li>
+<li>失败分支是否弹 <code>ConfirmPayDialog</code>；</li>
+<li>取消/超时是否保留原状态；</li>
+<li>SKU 为空时是否保护；</li>
+<li>覆盖安装旧缓存是否兼容；</li>
+<li>scroll/page 模式是否一致。</li>
+</ul>
+<p>这比单纯“修 bug”更接近工程验收。</p>
+<hr>
+<h2>7. 低效和重复劳动</h2>
+<h3>7.1 同一长会话混入太多主题</h3>
+<p>高投入会话中出现过一个问题：最初是 <code>ReadActivity pay_verify</code>，中途又进入 UI 线条、支付、文档、提交流程等多个主题。</p>
+<p>影响：</p>
+<ul>
+<li>上下文越来越肥；</li>
+<li>Claude 容易带着旧任务假设处理新任务；</li>
+<li>后续 resume 难以判断当前目标；</li>
+<li>复盘统计难以归类。</li>
+</ul>
+<p>建议：Lereader 中一个会话只承载一个主任务。支付、阅读器 UI、技术方案、commit/push 分开会话更稳。</p>
+<h3>7.2 关键约束经常中途补充</h3>
+<p>典型例子：</p>
+<ul>
+<li>“MembershipRechargeRetainDialog 只有支付成功后才 dismiss”；</li>
+<li>“验单失败后弹 ConfirmPayDialog”；</li>
+<li>“三方支付回来后 orderNum 可能因为 subscribeList 刷新丢失”；</li>
+<li>“支付 pay_type 需要通过 resolveCreateOrderPayType 转换”。</li>
+</ul>
+<p>这些都是根约束，如果一开始没有写清楚，Claude 会按通用逻辑先给方案，之后再被你纠正。</p>
+<p>建议：支付/阅读器任务一开始就给验收表。</p>
+<h3>7.3 技术方案粒度偏碎</h3>
+<p><code>feature</code> 目录下多个 2026-05-26 的商店弹窗/Toast/埋点方案高度相邻：</p>
+<ul>
+<li><code>store-popup-delayed-toast-plan</code></li>
+<li><code>store-popup-sku-toast-plan</code></li>
+<li><code>store-popup-toast-first-reason-plan</code></li>
+<li><code>store-first-topup-log-plan</code></li>
+<li><code>store-sub-read-free-month-log-plan</code></li>
+</ul>
+<p>这些可能都合理，但它们容易重复分析同一批入口、埋点规则和弹窗链路。</p>
+<p>建议：相邻小需求合成一个专题方案，内部按子需求拆章节，而不是每个点都新建独立方案。</p>
+<h3>7.4 <code>.claude</code> 文档体系开始有维护成本</h3>
+<p><code>.claude/docs</code> 已经 61 个文件。继续增长后会出现两个问题：</p>
+<ol>
+<li>Claude 不知道优先读哪个；</li>
+<li>旧文档和新文档可能重复或冲突。</li>
+</ol>
+<p>建议：新增文档前先判断：更新旧文档还是新建文档。主索引必须同步维护。</p>
+<h3>7.5 工具系统建设会打断业务主线</h3>
+<p>Lereader 里 <code>.claude</code> 生态建设很有价值，但如果在业务 bug 中途改 skills、hooks、CLAUDE.md、memory，会拖长当前任务。</p>
+<p>建议：业务任务中只记录“待沉淀项”，每周固定一次整理 <code>.claude</code>。</p>
+<hr>
+<h2>8. Lereader 提示词问题审查</h2>
+<h3>8.1 “看一下”太宽泛</h3>
+<p>常见提示：</p>
+<pre><code>看一下阅读器内的 pay_verify 验单流程。</code></pre>
+<p>问题：Claude 不知道你要的是解释、找 bug、确认状态机、写文档，还是改代码。</p>
+<p>建议写法：</p>
+<pre><code>模式：只读分析，不改代码。
+目标：审查阅读器内 pay_verify 验单流程。
+重点确认：三方支付返回后，成功/失败/取消分别如何影响 MembershipRechargeRetainDialog 和 ConfirmPayDialog。
+输出：入口、状态机、orderNum 来源、弹窗动作、风险点。</code></pre>
+<h3>8.2 验收标准要前置</h3>
+<p>支付类任务建议固定写：</p>
+<table><thead><tr><th>场景</th><th>期望行为</th></tr></thead><tbody>
+<tr><td>验单成功</td><td>关闭支付弹窗，刷新权益</td></tr>
+<tr><td>验单失败</td><td>不关闭原弹窗，弹 ConfirmPayDialog</td></tr>
+<tr><td>用户取消</td><td>不自动 dismiss</td></tr>
+<tr><td>orderNum 丢失</td><td>说明丢失原因，检查 pending 兜底</td></tr>
+<tr><td>SKU 未准备好</td><td>不创建错误订单，不展示错误价格</td></tr>
+</tbody></table>
+<h3>8.3 阅读器任务要先声明模式</h3>
+<p>阅读器任务建议开头写：</p>
+<pre><code>模式：分析 / 方案 / 实现 / 验证。
+范围：ReadActivity + ReadViewModel + 相关 Manager。
+必须先读：.claude/docs/reader/read_activity_analysis.md。
+不能做：不要顺手重构 ReadActivity，不要改无关支付/广告逻辑。</code></pre>
+<h3>8.4 技术方案任务要把接口/实验/埋点放最前</h3>
+<p>适合 Lereader 的技术方案提示词：</p>
+<pre><code>模式：写技术方案，不实现。
+需求：...
+请优先列：
+1. 是否需要后端接口改动；
+2. 是否需要实验 key；
+3. 是否需要新增/复用埋点；
+4. 客户端涉及页面和入口；
+5. 风险和验证方式。</code></pre>
+<hr>
+<h2>9. Lereader 专项优化建议</h2>
+<h3>9.1 每个任务用 6 行提示词开局</h3>
+<pre><code>模式：只读分析 / 写方案 / 实现 / 验证。
+目标：我要确认/修复/产出什么。
+背景：已知现象、日志、测试反馈、业务原因。
+约束：不能破坏什么、不能做什么、必须遵守什么。
+输入：相关文件/文档/截图/log。
+输出：我希望你按什么格式给结果。</code></pre>
+<h3>9.2 支付和阅读器任务先做状态机</h3>
+<p>在动代码前先让 Claude 输出：</p>
+<ul>
+<li>触发入口；</li>
+<li>关键字段；</li>
+<li>状态变化；</li>
+<li>UI 弹窗变化；</li>
+<li>成功/失败/取消分支；</li>
+<li>异步回调宿主存活检查。</li>
+</ul>
+<h3>9.3 技术方案合并相邻需求</h3>
+<p>商店弹窗、Toast、SKU、埋点这类相邻需求，建议先合并为一个专题：</p>
+<pre><code>商店弹窗体验优化技术方案
+- 子需求 A：SKU 未准备 Toast
+- 子需求 B：首充埋点
+- 子需求 C：订阅免费月展示
+- 子需求 D：延迟 Toast 原因</code></pre>
+<p>这样能减少重复读 StoreActivity、PaymentMethodDialog、埋点文件。</p>
+<h3>9.4 主文档优先，子文档补充</h3>
+<p>阅读器和支付已经有主文档。以后改相关模块时：</p>
+<ol>
+<li>先更新主文档摘要；</li>
+<li>再更新子文档细节；</li>
+<li>避免只新建子文档但主索引不知道。</li>
+</ol>
+<h3>9.5 业务任务和 Claude 工具建设分离</h3>
+<p>建议节奏：</p>
+<ul>
+<li>工作日：专注业务任务，少改 <code>.claude</code> 基础设施；</li>
+<li>每周一次：统一整理 CLAUDE.md、skills、hooks、memory、docs 索引。</li>
+</ul>
+<hr>
+<h2>10. 最重要结论</h2>
+<p>Lereader 项目里，你已经把 Claude Code 用成了深度工程协作工具。主要提升空间不是“让 Claude 更聪明”，而是：</p>
+<ol>
+<li><strong>任务开始前把模式、目标、约束、验收标准说清楚；</strong></li>
+<li><strong>支付/阅读器这类复杂链路先画状态机再改代码；</strong></li>
+<li><strong>长会话减少混题，技术方案减少碎片化；</strong></li>
+<li><strong><code>.claude</code> 文档继续沉淀，但要控制索引和维护成本。</strong></li>
+</ol>
+<p>如果只保留一个行动建议：</p>
+<blockquote>Lereader 每个任务开头先写 6 行：模式、目标、背景、约束、输入、输出。这样比继续增加新 skill 或 hook 更快减少返工。</blockquote></main></body></html>
